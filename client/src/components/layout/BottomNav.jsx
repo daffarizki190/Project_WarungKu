@@ -14,7 +14,6 @@ const MAIN_NAV = [
 
 const MORE_NAV = [
     { key: 'dashboard', label: 'Dashboard AI & Laporan', icon: '📊' },
-    { key: 'kategori', label: 'Kategori Produk', icon: '⊞' },
     { key: 'pelanggan', label: 'Pelanggan', icon: '◉' },
     { key: 'backup', label: 'Backup & Restore', icon: '⊜' },
 ];

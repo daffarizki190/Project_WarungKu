@@ -6,7 +6,6 @@ import { useAuthStore } from '../../lib/stores/auth';
 const NAV = [
   { key: 'kasir', label: 'Kasir', sub: 'Point of Sale', icon: '⊹' },
   { key: 'produk', label: 'Produk', sub: 'Manajemen', icon: '◈' },
-  { key: 'kategori', label: 'Kategori', sub: 'Produk', icon: '⊞' },
   { key: 'hutang', label: 'Hutang', sub: 'Pelanggan', icon: '◎' },
   { key: 'pelanggan', label: 'Pelanggan', sub: 'Database', icon: '◉' },
   { key: 'dashboard', label: 'Dashboard', sub: 'Laporan AI', icon: '📊', adminOnly: true },

@@ -11,7 +11,6 @@ import ProdukPage from './pages/ProdukPage';
 import HutangPage from './pages/HutangPage';
 import RiwayatPage from './pages/RiwayatPage';
 import DashboardPage from './pages/DashboardPage';
-import KategoriPage from './pages/KategoriPage';
 import PelangganPage from './pages/PelangganPage';
 import BackupPage from './pages/BackupPage';
 import LoginPage from './pages/LoginPage';
@@ -23,7 +22,6 @@ const PAGES = {
   hutang: HutangPage,
   riwayat: RiwayatPage,
   dashboard: DashboardPage,
-  kategori: KategoriPage,
   pelanggan: PelangganPage,
   backup: BackupPage,
 };
