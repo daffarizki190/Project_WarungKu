@@ -6,11 +6,11 @@
 const { Router } = require('express');
 const {
   ProductController, TransactionController, DebtController,
-  CategoryController, CustomerController,
+  CustomerController,
 } = require('@warungku/lib-controllers');
 const {
   ProductService, TransactionService, DebtService,
-  CategoryService, CustomerService,
+  CustomerService,
 } = require('@warungku/lib-services');
 const { asyncHandler, validateBody, restrictToAdmin } = require('@warungku/lib-middleware');
 
@@ -57,16 +57,6 @@ debtRouter
   .patch('/:id/pay', asyncHandler(DebtController.pay)) // Kasir boleh melunasi hutang
   .delete('/:id', restrictToAdmin, asyncHandler(DebtController.remove));
 
-// ─── Category Router ──────────────────────────────────────────────────────────
-
-const categoryRouter = Router();
-
-categoryRouter
-  .get('/', asyncHandler(CategoryController.getAll))
-  .get('/:id', asyncHandler(CategoryController.getOne))
-  .post('/', restrictToAdmin, validateBody(CategoryService.validate), asyncHandler(CategoryController.create))
-  .put('/:id', restrictToAdmin, asyncHandler(CategoryController.update))
-  .delete('/:id', restrictToAdmin, asyncHandler(CategoryController.remove));
 
 // ─── Customer Router ──────────────────────────────────────────────────────────
 
@@ -86,12 +76,11 @@ const mountRoutes = (app) => {
   app.use('/api/products', productRouter);
   app.use('/api/transactions', transactionRouter);
   app.use('/api/debts', debtRouter);
-  app.use('/api/categories', categoryRouter);
   app.use('/api/customers', customerRouter);
 };
 
 module.exports = {
   productRouter, transactionRouter, debtRouter,
-  categoryRouter, customerRouter, authRouter,
+  customerRouter, authRouter,
   mountRoutes,
 };
