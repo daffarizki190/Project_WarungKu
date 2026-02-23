@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: warungku-app
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASS
+        value: 123456
+    disk:
+      name: warungku-data
+      mountPath: /opt/render/project/src/packages/lib-database/data
+      sizeGB: 1
