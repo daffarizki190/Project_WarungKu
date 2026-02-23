@@ -1,0 +1,9 @@
+{
+  "name": "@warungku/lib-middleware",
+  "version": "1.0.0",
+  "description": "All Express middleware: logger, error handler, validator, not-found",
+  "main": "src/index.js",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2"
+  }
+}

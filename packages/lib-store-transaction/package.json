@@ -1,0 +1,7 @@
+{
+  "name": "@warungku/lib-store-transaction",
+  "version": "1.0.0",
+  "description": "Zustand store — transaction state",
+  "main": "src/index.js",
+  "peerDependencies": { "zustand": ">=4" }
+}

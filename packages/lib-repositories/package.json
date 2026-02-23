@@ -1,0 +1,10 @@
+{
+  "name": "@warungku/lib-repositories",
+  "version": "1.0.0",
+  "description": "Repository layer — data access abstraction for all collections",
+  "main": "src/index.js",
+  "dependencies": {
+    "@warungku/lib-database": "*",
+    "@warungku/lib-models": "*"
+  }
+}

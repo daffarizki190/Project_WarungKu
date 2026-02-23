@@ -1,0 +1,6 @@
+{
+  "name": "@warungku/lib-database",
+  "version": "1.0.0",
+  "description": "JSON file-based database engine — read/write/seed",
+  "main": "src/index.js"
+}

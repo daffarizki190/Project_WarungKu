@@ -1,0 +1,9 @@
+{
+  "name": "@warungku/lib-models",
+  "version": "1.0.0",
+  "description": "Domain model factories — Product, Transaction, Debt",
+  "main": "src/index.js",
+  "dependencies": {
+    "uuid": "^9.0.0"
+  }
+}

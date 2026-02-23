@@ -1,0 +1,22 @@
+{
+  "name": "warungku-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:python\"",
+    "dev:server": "npm run dev --workspace=@warungku/server",
+    "dev:client": "npm run start --workspace=@warungku/client",
+    "dev:python": "cd python-service && venv\\Scripts\\activate && uvicorn main:app --reload",
+    "build": "npm run build --workspace=@warungku/client",
+    "start": "npm run start --workspace=@warungku/server",
+    "prod": "npm run build && npm run start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

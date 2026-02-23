@@ -1,0 +1,7 @@
+{
+  "name": "@warungku/lib-store-debt",
+  "version": "1.0.0",
+  "description": "Zustand store — debt state",
+  "main": "src/index.js",
+  "peerDependencies": { "zustand": ">=4" }
+}

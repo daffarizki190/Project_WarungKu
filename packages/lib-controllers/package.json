@@ -1,0 +1,11 @@
+{
+  "name": "@warungku/lib-controllers",
+  "version": "1.0.0",
+  "description": "HTTP controllers — handle req/res, delegate to services",
+  "main": "src/index.js",
+  "dependencies": {
+    "@warungku/lib-services": "*",
+    "@warungku/lib-middleware": "*",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

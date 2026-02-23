@@ -1,0 +1,25 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── Build output ─────────────────────────────────────────────────────────────
+client/build/
+dist/
+
+# ─── Environment variables (JANGAN pernah di-commit!) ────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Database JSON (data runtime, bukan source code) ─────────────────────────
+# Sediakan file seed terpisah jika diperlukan, e.g. products.seed.json
+packages/lib-database/data/*.json
+
+# ─── Log files ────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ─── OS & Editor ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

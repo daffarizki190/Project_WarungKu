@@ -1,0 +1,7 @@
+{
+  "name": "@warungku/lib-store-product",
+  "version": "1.0.0",
+  "description": "Zustand store — product state with devtools",
+  "main": "src/index.js",
+  "peerDependencies": { "react": ">=18", "zustand": ">=4" }
+}

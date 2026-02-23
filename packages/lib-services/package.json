@@ -1,0 +1,11 @@
+{
+  "name": "@warungku/lib-services",
+  "version": "1.0.0",
+  "description": "Business logic service layer — validation + domain operations",
+  "main": "src/index.js",
+  "dependencies": {
+    "@warungku/lib-database": "*",
+    "@warungku/lib-repositories": "*",
+    "@warungku/lib-models": "*"
+  }
+}

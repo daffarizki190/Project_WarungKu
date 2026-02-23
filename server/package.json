@@ -1,0 +1,22 @@
+{
+  "name": "@warungku/server",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "scripts": {
+    "dev":   "nodemon src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@warungku/lib-routes":     "*",
+    "@warungku/lib-middleware": "*",
+    "compression":     "^1.7.4",
+    "cookie-parser":   "^1.4.6",
+    "cors":            "^2.8.5",
+    "dotenv":          "^16.3.1",
+    "express":         "^4.18.2",
+    "helmet":          "^7.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
