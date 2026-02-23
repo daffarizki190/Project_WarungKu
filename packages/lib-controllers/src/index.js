@@ -30,8 +30,18 @@ const catchAsync = (fn) => (req, res, next) => {
 const ProductController = {
   getAll: catchAsync(async (req, res) => {
     const { category, search, sortBy, order } = req.query;
-    const products = await ProductService.getAll({ category, search, sortBy, order });
-    const categories = await ProductService.getCategories();
+    // Fetch ALL products first (for category extraction), then filter
+    const allProducts = await ProductService.getAll({ sortBy, order });
+    // Extract unique categories from products (no second DB call needed)
+    const categories = [...new Set(allProducts.map((p) => p.category).filter(Boolean))].sort();
+    // Now apply filtering on in-memory data
+    let products = allProducts;
+    if (category && category !== 'Semua') {
+      products = allProducts.filter((p) => p.category === category);
+    }
+    if (search) {
+      products = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+    }
     return success(res, { products, categories, total: products.length });
   }),
 
