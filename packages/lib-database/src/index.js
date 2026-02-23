@@ -18,22 +18,38 @@ const COLLECTIONS = Object.freeze({
 
 // Create connection (Singleton)
 let isConnected = false;
+let connectionPromise = null;
+
 const connectDB = async () => {
-  if (isConnected) return;
+  if (isConnected && mongoose.connection.readyState === 1) return;
   if (!process.env.MONGODB_URI) {
     console.warn('WARN: MONGODB_URI is not set!');
     return;
   }
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, { dbName: 'warungku' });
+  // If already connecting, wait for that promise
+  if (connectionPromise) return connectionPromise;
+
+  connectionPromise = mongoose.connect(process.env.MONGODB_URI, {
+    dbName: 'warungku',
+    serverSelectionTimeoutMS: 5000, // 5 seconds timeout for server selection
+    connectTimeoutMS: 8000,          // 8 seconds connection timeout
+    socketTimeoutMS: 10000,          // 10 seconds socket timeout
+    maxPoolSize: 10,
+    bufferCommands: false,
+  }).then(() => {
     isConnected = true;
+    connectionPromise = null;
     console.log('✅ MongoDB Connected to Atlas');
-  } catch (err) {
-    console.error('❌ MongoDB Connection Error:', err);
-  }
+  }).catch(err => {
+    connectionPromise = null;
+    console.error('❌ MongoDB Connection Error:', err.message);
+    throw err;
+  });
+
+  return connectionPromise;
 };
-// Trigger connection immediately
-connectDB();
+// NOTE: Do NOT call connectDB() at module level in Serverless environments.
+// Connection will be established lazily on first query per request.
 
 // Dynamic Schema with strict:false to allow JSON exact match
 const createModel = (name) => {
