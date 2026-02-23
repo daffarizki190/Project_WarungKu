@@ -100,18 +100,25 @@ app.use(errorLogger);
 app.use(errorHandler);
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-const server = app.listen(PORT, () => {
-  console.log(`\x1b[32m🏪  WarungKu → http://localhost:${PORT}\x1b[0m`);
-  console.log(`\x1b[36m📦  ENV: ${process.env.NODE_ENV || 'development'}\x1b[0m`);
-});
+let server;
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  server = app.listen(PORT, () => {
+    console.log(`\x1b[32m🏪  WarungKu → http://localhost:${PORT}\x1b[0m`);
+    console.log(`\x1b[36m📦  ENV: ${process.env.NODE_ENV || 'development'}\x1b[0m`);
+  });
+}
 
 // ─── Graceful shutdown ────────────────────────────────────────────────────────
 const shutdown = (signal) => {
   console.log(`\n\x1b[33m${signal} — shutting down...\x1b[0m`);
-  server.close(() => {
-    console.log('\x1b[32mServer closed.\x1b[0m');
+  if (server) {
+    server.close(() => {
+      console.log('\x1b[32mServer closed.\x1b[0m');
+      process.exit(0);
+    });
+  } else {
     process.exit(0);
-  });
+  }
 };
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
