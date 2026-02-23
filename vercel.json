@@ -1,0 +1,15 @@
+{
+    "version": 2,
+    "buildCommand": "npm install && npm run build --workspace=@warungku/client",
+    "outputDirectory": "client/build",
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/api/index.js"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}

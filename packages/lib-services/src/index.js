@@ -10,15 +10,10 @@ const { COLLECTIONS: C } = db;
 const { ProductRepository, TransactionRepository, DebtRepository, CategoryRepository, CustomerRepository } = require('@warungku/lib-repositories');
 const { createTransactionItem } = require('@warungku/lib-models');
 
-// ─── Helper: build validation result ─────────────────────────────────────────
 const ok = (data) => ({ valid: true, errors: [], data });
 const fail = (...errors) => ({ valid: false, errors, data: null });
 
-// ─── ProductService ───────────────────────────────────────────────────────────
-
 const ProductService = {
-
-  /** Validate product payload. Returns { valid, errors }. */
   validate({ name, category, price, stock }) {
     const errors = [];
     if (!name || String(name).trim().length < 2) errors.push('Nama produk minimal 2 karakter');
@@ -28,19 +23,15 @@ const ProductService = {
     return errors.length ? fail(...errors) : ok(null);
   },
 
-  getAll(query) { return ProductRepository.findAll(query); },
-  getCategories() { return ProductRepository.findCategories(); },
-  getById(id) { return ProductRepository.findById(id); },
-  create(data) { return ProductRepository.create(data); },
-  update(id, partial) { return ProductRepository.update(id, partial); },
-  remove(id) { return ProductRepository.remove(id); },
+  async getAll(query) { return await ProductRepository.findAll(query); },
+  async getCategories() { return await ProductRepository.findCategories(); },
+  async getById(id) { return await ProductRepository.findById(id); },
+  async create(data) { return await ProductRepository.create(data); },
+  async update(id, partial) { return await ProductRepository.update(id, partial); },
+  async remove(id) { return await ProductRepository.remove(id); },
 };
 
-// ─── TransactionService ───────────────────────────────────────────────────────
-
 const TransactionService = {
-
-  /** Validate transaction payload. */
   validate({ items, amountPaid }) {
     const errors = [];
     if (!Array.isArray(items) || items.length === 0) errors.push('Items tidak boleh kosong');
@@ -48,52 +39,39 @@ const TransactionService = {
     return errors.length ? fail(...errors) : ok(null);
   },
 
-  getAll(query) { return TransactionRepository.findAll(query); },
-  dailySummary() { return TransactionRepository.dailySummary(); },
+  async getAll(query) { return await TransactionRepository.findAll(query); },
+  async dailySummary() { return await TransactionRepository.dailySummary(); },
 
-  /**
-   * Core business rule: validate stock, deduct, record transaction atomically.
-   * Mendukung diskon (nominal) dan metode pembayaran.
-   */
-  processCheckout({ items, amountPaid, note = '', discount = 0, paymentMethod = 'CASH' }) {
+  async processCheckout({ items, amountPaid, note = '', discount = 0, paymentMethod = 'CASH' }) {
     const discountAmount = Math.max(0, Number(discount));
-    // 1. Collect products (avoid N+1 by reading all products once)
-    const allProducts = db.read(C.PRODUCTS);
-    const productMap = new Map(allProducts.map((p) => [p.id, p]));
 
-    // 2. Validate each item
+    // 1. Collect and validate products
+    let lineItems = [];
+    let subtotal = 0;
+
     for (const item of items) {
-      const product = productMap.get(item.productId);
-      if (!product) {
-        return fail(`Produk tidak ditemukan: ${item.productId}`);
-      }
-      if (product.stock < item.qty) {
-        return fail(`Stok "${product.name}" tidak cukup (sisa: ${product.stock})`);
-      }
+      const product = await ProductRepository.findById(item.productId);
+      if (!product) return fail(`Produk tidak ditemukan: ${item.productId}`);
+      if (product.stock < item.qty) return fail(`Stok "${product.name}" tidak cukup (sisa: ${product.stock})`);
+
+      const lItem = createTransactionItem({ productId: item.productId, name: product.name, price: product.price, qty: item.qty });
+      lineItems.push(lItem);
+      subtotal += lItem.subtotal;
     }
 
-    // 3. Hitung total sebelum dan sesudah diskon
-    const lineItems = items.map((item) => {
-      const product = productMap.get(item.productId);
-      return createTransactionItem({ productId: item.productId, name: product.name, price: product.price, qty: item.qty });
-    });
-
-    const subtotal = lineItems.reduce((s, i) => s + i.subtotal, 0);
     const total = Math.max(0, subtotal - discountAmount);
     const change = Number(amountPaid) - total;
 
     if (change < 0) return fail('Uang yang dibayarkan kurang');
 
     // 4. Atomic: deduct stock + create transaction
-    const transaction = db.atomic(({ write, read }) => {
-      const products = read(C.PRODUCTS);
-      items.forEach((item) => {
-        const idx = products.findIndex((p) => p.id === item.productId);
-        if (idx !== -1) products[idx].stock -= item.qty;
-      });
-      write(C.PRODUCTS, products);
+    const transaction = await db.atomic(async () => {
+      for (const item of items) {
+        const p = await ProductRepository.findById(item.productId);
+        if (p) await ProductRepository.update(p.id, { stock: p.stock - item.qty });
+      }
 
-      return TransactionRepository.create({
+      return await TransactionRepository.create({
         type: 'SALE', items: lineItems, total, amountPaid: Number(amountPaid),
         change, note, discount: discountAmount, paymentMethod,
       });
@@ -103,11 +81,7 @@ const TransactionService = {
   },
 };
 
-// ─── DebtService ──────────────────────────────────────────────────────────────
-
 const DebtService = {
-
-  /** Validate debt payload. */
   validate({ customerName, amount }) {
     const errors = [];
     if (!customerName || String(customerName).trim().length < 2) errors.push('Nama pelanggan minimal 2 karakter');
@@ -115,24 +89,21 @@ const DebtService = {
     return errors.length ? fail(...errors) : ok(null);
   },
 
-  getAll(query) { return DebtRepository.findAll(query); },
-  stats() { return DebtRepository.stats(); },
-  dailyStats() { return DebtRepository.dailyStats(); },
-  getById(id) { return DebtRepository.findById(id); },
-  create(data) { return DebtRepository.create(data); },
-  remove(id) { return DebtRepository.remove(id); },
+  async getAll(query) { return await DebtRepository.findAll(query); },
+  async stats() { return await DebtRepository.stats(); },
+  async dailyStats() { return await DebtRepository.dailyStats(); },
+  async getById(id) { return await DebtRepository.findById(id); },
+  async create(data) { return await DebtRepository.create(data); },
+  async remove(id) { return await DebtRepository.remove(id); },
 
-  /**
-   * Core business rule: mark paid + record repayment transaction atomically.
-   */
-  processPay(id) {
-    const debt = DebtRepository.findById(id);
+  async processPay(id) {
+    const debt = await DebtRepository.findById(id);
     if (!debt) return fail('Data hutang tidak ditemukan');
     if (debt.isPaid) return fail('Hutang sudah lunas');
 
-    const result = db.atomic(() => {
-      const updated = DebtRepository.markAsPaid(id);
-      TransactionRepository.create({
+    const result = await db.atomic(async () => {
+      const updated = await DebtRepository.markAsPaid(id);
+      await TransactionRepository.create({
         type: 'DEBT_PAYMENT',
         items: [createTransactionItem({ productId: null, name: `Pelunasan hutang — ${debt.customerName}`, price: debt.amount, qty: 1 })],
         total: debt.amount,
@@ -147,22 +118,18 @@ const DebtService = {
   },
 };
 
-// ─── CategoryService ──────────────────────────────────────────────
-
 const CategoryService = {
   validate({ name }) {
     const errors = [];
     if (!name || String(name).trim().length < 2) errors.push('Nama kategori minimal 2 karakter');
     return errors.length ? fail(...errors) : ok(null);
   },
-  getAll() { return CategoryRepository.findAll(); },
-  getById(id) { return CategoryRepository.findById(id); },
-  create(data) { return CategoryRepository.create(data); },
-  update(id, data) { return CategoryRepository.update(id, data); },
-  remove(id) { return CategoryRepository.remove(id); },
+  async getAll() { return await CategoryRepository.findAll(); },
+  async getById(id) { return await CategoryRepository.findById(id); },
+  async create(data) { return await CategoryRepository.create(data); },
+  async update(id, data) { return await CategoryRepository.update(id, data); },
+  async remove(id) { return await CategoryRepository.remove(id); },
 };
-
-// ─── CustomerService ─────────────────────────────────────────────
 
 const CustomerService = {
   validate({ name }) {
@@ -170,11 +137,11 @@ const CustomerService = {
     if (!name || String(name).trim().length < 2) errors.push('Nama pelanggan minimal 2 karakter');
     return errors.length ? fail(...errors) : ok(null);
   },
-  getAll(q) { return CustomerRepository.findAll(q); },
-  getById(id) { return CustomerRepository.findById(id); },
-  create(data) { return CustomerRepository.create(data); },
-  update(id, data) { return CustomerRepository.update(id, data); },
-  remove(id) { return CustomerRepository.remove(id); },
+  async getAll(q) { return await CustomerRepository.findAll(q); },
+  async getById(id) { return await CustomerRepository.findById(id); },
+  async create(data) { return await CustomerRepository.create(data); },
+  async update(id, data) { return await CustomerRepository.update(id, data); },
+  async remove(id) { return await CustomerRepository.remove(id); },
 };
 
 module.exports = { ProductService, TransactionService, DebtService, CategoryService, CustomerService };

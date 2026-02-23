@@ -1,49 +1,81 @@
 // packages/lib-database/src/index.js
 // @warungku/lib-database
-// JSON file-based database engine.
-// Provides: read, write, findById, findAll, insert, update, remove
-// Each collection maps to a JSON file in /data
+// MongoDB Mongoose-based database engine.
+// Provides: read, write, findById, findAll, insert, update, remove (now async)
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+const mongoose = require('mongoose');
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../../../.env') });
 
-const DATA_DIR = path.resolve(__dirname, '../data');
+const COLLECTIONS = Object.freeze({
+  PRODUCTS: 'products',
+  TRANSACTIONS: 'transactions',
+  DEBTS: 'debts',
+  CATEGORIES: 'categories',
+  CUSTOMERS: 'customers',
+});
 
-// ─── Low-level helpers ────────────────────────────────────────────────────────
-
-/**
- * Read a JSON collection file and return its array.
- * @param {string} collection  e.g. 'products'
- * @returns {Array}
- */
-const read = (collection) => {
-  const file = path.join(DATA_DIR, `${collection}.json`);
-  if (!fs.existsSync(file)) {
-    fs.writeFileSync(file, '[]', 'utf8');
-    return [];
+// Create connection (Singleton)
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected) return;
+  if (!process.env.MONGODB_URI) {
+    console.warn('WARN: MONGODB_URI is not set!');
+    return;
   }
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, { dbName: 'warungku' });
+    isConnected = true;
+    console.log('✅ MongoDB Connected to Atlas');
+  } catch (err) {
+    console.error('❌ MongoDB Connection Error:', err);
+  }
+};
+// Trigger connection immediately
+connectDB();
+
+// Dynamic Schema with strict:false to allow JSON exact match
+const createModel = (name) => {
+  const schema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true }
+  }, { strict: false, versionKey: false });
+
+  // Transform output to remove internal _id
+  schema.set('toJSON', {
+    transform: function (doc, ret) { delete ret._id; return ret; }
+  });
+
+  return mongoose.models[name] || mongoose.model(name, schema, name); // third param forces exact collection name
 };
 
-/**
- * Write an array back to the JSON collection file.
- * @param {string} collection
- * @param {Array}  data
- */
-const write = (collection, data) => {
-  const file = path.join(DATA_DIR, `${collection}.json`);
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+const Models = {
+  [COLLECTIONS.PRODUCTS]: createModel(COLLECTIONS.PRODUCTS),
+  [COLLECTIONS.TRANSACTIONS]: createModel(COLLECTIONS.TRANSACTIONS),
+  [COLLECTIONS.DEBTS]: createModel(COLLECTIONS.DEBTS),
+  [COLLECTIONS.CATEGORIES]: createModel(COLLECTIONS.CATEGORIES),
+  [COLLECTIONS.CUSTOMERS]: createModel(COLLECTIONS.CUSTOMERS),
 };
 
-// ─── Query helpers ────────────────────────────────────────────────────────────
+// ─── Query helpers (Async) ───────────────────────────────────────────────────
 
-/**
- * Find all records, with optional predicate filter and sort.
- */
-const findAll = (collection, { filter = null, sortBy = null, order = 'asc' } = {}) => {
-  let data = read(collection);
+const read = async (collection) => {
+  await connectDB();
+  const docs = await Models[collection].find({}).lean();
+  return docs.map(d => { delete d._id; return d; });
+};
+
+// write is mostly used for bulk reset/migration now
+const write = async (collection, data) => {
+  await connectDB();
+  await Models[collection].deleteMany({});
+  if (data && data.length > 0) {
+    await Models[collection].insertMany(data);
+  }
+};
+
+const findAll = async (collection, { filter = null, sortBy = null, order = 'asc' } = {}) => {
+  let data = await read(collection);
   if (filter) data = data.filter(filter);
   if (sortBy) {
     data = [...data].sort((a, b) => {
@@ -57,59 +89,43 @@ const findAll = (collection, { filter = null, sortBy = null, order = 'asc' } = {
   return data;
 };
 
-/**
- * Find one record by id.
- */
-const findById = (collection, id) => {
-  return read(collection).find((r) => r.id === id) || null;
+const findById = async (collection, id) => {
+  await connectDB();
+  const doc = await Models[collection].findOne({ id }).lean();
+  if (doc) delete doc._id;
+  return doc || null;
 };
 
-/**
- * Insert a new record.
- */
-const insert = (collection, record) => {
-  const data = read(collection);
-  data.push(record);
-  write(collection, data);
+const insert = async (collection, record) => {
+  await connectDB();
+  await Models[collection].create(record);
   return record;
 };
 
-/**
- * Update a record by id — merges partial fields.
- */
-const update = (collection, id, partial) => {
-  const data = read(collection);
-  const index = data.findIndex((r) => r.id === id);
-  if (index === -1) return null;
-  data[index] = { ...data[index], ...partial, updatedAt: new Date().toISOString() };
-  write(collection, data);
-  return data[index];
+const update = async (collection, id, partial) => {
+  await connectDB();
+  const updatedAt = new Date().toISOString();
+  const doc = await Models[collection].findOneAndUpdate(
+    { id },
+    { $set: { ...partial, updatedAt } },
+    { new: true, lean: true }
+  );
+  if (doc) delete doc._id;
+  return doc || null;
 };
 
-/**
- * Remove a record by id.
- */
-const remove = (collection, id) => {
-  const data = read(collection);
-  const record = data.find((r) => r.id === id);
-  if (!record) return null;
-  write(collection, data.filter((r) => r.id !== id));
-  return record;
+const remove = async (collection, id) => {
+  await connectDB();
+  const doc = await Models[collection].findOneAndDelete({ id }).lean();
+  if (doc) delete doc._id;
+  return doc || null;
 };
 
-/**
- * Run multiple operations atomically (synchronous "transaction").
- * @param {Function} fn  receives { read, write, findById, insert, update, remove }
- */
-const atomic = (fn) => fn({ read, write, findById, insert, update, remove, findAll });
+// Provides an interface for atomic operations.
+// Note: Actual MongoDB transactions require replica sets. 
+// For this rewrite, we will run the provided async function context.
+const atomic = async (fn) => {
+  return await fn({ read, write, findById, insert, update, remove, findAll });
+};
 
-// ─── Collection names (constants) ────────────────────────────────────────────
-const COLLECTIONS = Object.freeze({
-  PRODUCTS: 'products',
-  TRANSACTIONS: 'transactions',
-  DEBTS: 'debts',
-  CATEGORIES: 'categories',
-  CUSTOMERS: 'customers',
-});
-
-module.exports = { read, write, findAll, findById, insert, update, remove, atomic, COLLECTIONS };
+module.exports = { connectDB, read, write, findAll, findById, insert, update, remove, atomic, COLLECTIONS };

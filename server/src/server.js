@@ -60,11 +60,11 @@ mountRoutes(app);
 const db = require('@warungku/lib-database');
 const { COLLECTIONS: C } = db;
 
-app.get('/api/backup', (req, res) => {
+app.get('/api/backup', async (req, res) => {
   const backup = {};
-  Object.entries(C).forEach(([, col]) => {
-    backup[col] = db.read(col);
-  });
+  for (const [, col] of Object.entries(C)) {
+    backup[col] = await db.read(col);
+  }
   const json = JSON.stringify(backup, null, 2);
   const date = new Date().toISOString().slice(0, 10);
   res.setHeader('Content-Disposition', `attachment; filename="warungku-backup-${date}.json"`);
@@ -72,16 +72,16 @@ app.get('/api/backup', (req, res) => {
   res.send(json);
 });
 
-app.post('/api/restore', express.json({ limit: '50mb' }), (req, res) => {
+app.post('/api/restore', express.json({ limit: '50mb' }), async (req, res) => {
   const backup = req.body;
   if (typeof backup !== 'object' || Array.isArray(backup)) {
     return res.status(400).json({ success: false, message: 'Format backup tidak valid' });
   }
-  Object.entries(C).forEach(([, col]) => {
+  for (const [, col] of Object.entries(C)) {
     if (Array.isArray(backup[col])) {
-      db.write(col, backup[col]);
+      await db.write(col, backup[col]);
     }
-  });
+  }
   return res.json({ success: true, message: 'Data berhasil direstore' });
 });
 

@@ -15,11 +15,8 @@ const {
 // ─── ProductRepository ────────────────────────────────────────────────────────
 
 const ProductRepository = {
-  /**
-   * Find all products with optional filters and sort.
-   */
-  findAll({ category, search, sortBy = 'name', order = 'asc' } = {}) {
-    return db.findAll(C.PRODUCTS, {
+  async findAll({ category, search, sortBy = 'name', order = 'asc' } = {}) {
+    return await db.findAll(C.PRODUCTS, {
       filter: (p) => {
         const matchCat = !category || category === 'Semua' || p.category.toLowerCase() === category.toLowerCase();
         const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
@@ -30,40 +27,34 @@ const ProductRepository = {
     });
   },
 
-  /** Return all unique category strings. */
-  findCategories() {
-    const all = db.read(C.PRODUCTS);
+  async findCategories() {
+    const all = await db.read(C.PRODUCTS);
     return [...new Set(all.map((p) => p.category))];
   },
 
-  /** Find one product by id. Returns null if not found. */
-  findById(id) {
-    return db.findById(C.PRODUCTS, id);
+  async findById(id) {
+    return await db.findById(C.PRODUCTS, id);
   },
 
-  /** Persist a new Product record and return it. */
-  create(data) {
+  async create(data) {
     const product = createProduct(data);
-    return db.insert(C.PRODUCTS, product);
+    return await db.insert(C.PRODUCTS, product);
   },
 
-  /** Merge partial fields into an existing product. Returns updated record or null. */
-  update(id, partial) {
-    return db.update(C.PRODUCTS, id, partial);
+  async update(id, partial) {
+    return await db.update(C.PRODUCTS, id, partial);
   },
 
-  /** Remove a product. Returns removed record or null. */
-  remove(id) {
-    return db.remove(C.PRODUCTS, id);
+  async remove(id) {
+    return await db.remove(C.PRODUCTS, id);
   },
 };
 
 // ─── TransactionRepository ────────────────────────────────────────────────────
 
 const TransactionRepository = {
-  /** Find all transactions, newest first, with optional type + date filters. */
-  findAll({ type, startDate, endDate } = {}) {
-    return db.findAll(C.TRANSACTIONS, {
+  async findAll({ type, startDate, endDate } = {}) {
+    return await db.findAll(C.TRANSACTIONS, {
       filter: (t) => {
         const matchType = !type || t.type === type.toUpperCase();
         const matchStart = !startDate || new Date(t.createdAt) >= new Date(startDate);
@@ -75,23 +66,19 @@ const TransactionRepository = {
     });
   },
 
-  /** Find one transaction by id. */
-  findById(id) {
-    return db.findById(C.TRANSACTIONS, id);
+  async findById(id) {
+    return await db.findById(C.TRANSACTIONS, id);
   },
 
-  /**
-   * Persist a new Transaction (with pre-built item array).
-   */
-  create({ type, items, total, amountPaid, change, note }) {
-    const tx = createTransaction({ type, items, total, amountPaid, change, note });
-    return db.insert(C.TRANSACTIONS, tx);
+  async create({ type, items, total, amountPaid, change, note, discount = 0, paymentMethod = 'CASH' }) {
+    const tx = createTransaction({ type, items, total, amountPaid, change, note, discount, paymentMethod });
+    return await db.insert(C.TRANSACTIONS, tx);
   },
 
-  /** Ringkasan harian transaksi (hanya domain transaksi). */
-  dailySummary() {
+  async dailySummary() {
     const today = new Date().toDateString();
-    const sales = db.read(C.TRANSACTIONS).filter(
+    const all = await db.read(C.TRANSACTIONS);
+    const sales = all.filter(
       (t) => t.type === 'SALE' && new Date(t.createdAt).toDateString() === today
     );
     return {
@@ -105,9 +92,8 @@ const TransactionRepository = {
 // ─── DebtRepository ──────────────────────────────────────────────────────────
 
 const DebtRepository = {
-  /** Find all debts with optional status + search filters. */
-  findAll({ status, search } = {}) {
-    return db.findAll(C.DEBTS, {
+  async findAll({ status, search } = {}) {
+    return await db.findAll(C.DEBTS, {
       filter: (d) => {
         const matchStatus = !status || status === 'all'
           || (status === 'paid' && d.isPaid)
@@ -120,30 +106,25 @@ const DebtRepository = {
     });
   },
 
-  /** Find one debt by id. */
-  findById(id) {
-    return db.findById(C.DEBTS, id);
+  async findById(id) {
+    return await db.findById(C.DEBTS, id);
   },
 
-  /** Persist a new Debt record. */
-  create(data) {
+  async create(data) {
     const debt = createDebt(data);
-    return db.insert(C.DEBTS, debt);
+    return await db.insert(C.DEBTS, debt);
   },
 
-  /** Mark a debt as paid. */
-  markAsPaid(id) {
-    return db.update(C.DEBTS, id, { isPaid: true, paidAt: new Date().toISOString() });
+  async markAsPaid(id) {
+    return await db.update(C.DEBTS, id, { isPaid: true, paidAt: new Date().toISOString() });
   },
 
-  /** Remove a debt. */
-  remove(id) {
-    return db.remove(C.DEBTS, id);
+  async remove(id) {
+    return await db.remove(C.DEBTS, id);
   },
 
-  /** Agregat statistik seluruh hutang. */
-  stats() {
-    const all = db.read(C.DEBTS);
+  async stats() {
+    const all = await db.read(C.DEBTS);
     const unpaid = all.filter((d) => !d.isPaid);
     return {
       total: all.length,
@@ -153,13 +134,10 @@ const DebtRepository = {
     };
   },
 
-  /**
-   * Ringkasan hutang harian — digunakan untuk cross-domain daily summary.
-   * Dipisahkan dari TransactionRepository agar tetap single-responsibility.
-   */
-  dailyStats() {
+  async dailyStats() {
     const today = new Date().toDateString();
-    const todayDebts = db.read(C.DEBTS).filter(
+    const all = await db.read(C.DEBTS);
+    const todayDebts = all.filter(
       (d) => new Date(d.createdAt).toDateString() === today
     );
     return {
@@ -169,36 +147,32 @@ const DebtRepository = {
   },
 };
 
-// ─── TransactionRepository.create fix — pass discount & paymentMethod ─────────
-
-// (create method sekarang forward semua field dari argument, termasuk discount & paymentMethod)
-
 // ─── CategoryRepository ───────────────────────────────────────────────────────
 
 const CategoryRepository = {
-  findAll() {
-    return db.findAll(C.CATEGORIES, { sortBy: 'name', order: 'asc' });
+  async findAll() {
+    return await db.findAll(C.CATEGORIES, { sortBy: 'name', order: 'asc' });
   },
-  findById(id) { return db.findById(C.CATEGORIES, id); },
-  create(data) { const cat = createCategory(data); return db.insert(C.CATEGORIES, cat); },
-  update(id, p) { return db.update(C.CATEGORIES, id, p); },
-  remove(id) { return db.remove(C.CATEGORIES, id); },
+  async findById(id) { return await db.findById(C.CATEGORIES, id); },
+  async create(data) { const cat = createCategory(data); return await db.insert(C.CATEGORIES, cat); },
+  async update(id, p) { return await db.update(C.CATEGORIES, id, p); },
+  async remove(id) { return await db.remove(C.CATEGORIES, id); },
 };
 
 // ─── CustomerRepository ───────────────────────────────────────────────────────
 
 const CustomerRepository = {
-  findAll({ search } = {}) {
-    return db.findAll(C.CUSTOMERS, {
+  async findAll({ search } = {}) {
+    return await db.findAll(C.CUSTOMERS, {
       filter: (c) => !search || c.name.toLowerCase().includes(search.toLowerCase()),
       sortBy: 'name',
       order: 'asc',
     });
   },
-  findById(id) { return db.findById(C.CUSTOMERS, id); },
-  create(data) { const cust = createCustomer(data); return db.insert(C.CUSTOMERS, cust); },
-  update(id, p) { return db.update(C.CUSTOMERS, id, { ...p, updatedAt: new Date().toISOString() }); },
-  remove(id) { return db.remove(C.CUSTOMERS, id); },
+  async findById(id) { return await db.findById(C.CUSTOMERS, id); },
+  async create(data) { const cust = createCustomer(data); return await db.insert(C.CUSTOMERS, cust); },
+  async update(id, p) { return await db.update(C.CUSTOMERS, id, { ...p, updatedAt: new Date().toISOString() }); },
+  async remove(id) { return await db.remove(C.CUSTOMERS, id); },
 };
 
 module.exports = { ProductRepository, TransactionRepository, DebtRepository, CategoryRepository, CustomerRepository };
