@@ -15,8 +15,12 @@ const NAV = [
 
 const Sidebar = ({ activePage, onNavigate }) => {
   const { shopName, ownerName } = useCookiePrefs();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const isAdmin = user?.role === 'admin';
+
+  const handleLogout = () => {
+    if (window.confirm('Keluar dari akun?')) logout();
+  };
 
   return (
     <aside className="hidden lg:flex w-[240px] min-h-screen flex-col shrink-0 relative"
@@ -79,21 +83,31 @@ const Sidebar = ({ activePage, onNavigate }) => {
         })}
       </nav>
 
-      {/* Bottom user info */}
-      <div className="mx-3 mb-6 p-4 rounded-2xl"
-        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(16,185,129,0.1)' }}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
-            style={{ background: 'rgba(5,150,105,0.2)', color: '#34D399', border: '1px solid rgba(5,150,105,0.25)' }}>
-            {ownerName[0]?.toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold truncate leading-none mb-1"
-              style={{ color: '#F1F5F9' }}>{shopName}</p>
-            <p className="text-[10px] truncate"
-              style={{ color: '#64748B' }}>{ownerName}</p>
+      {/* Bottom user info + Logout */}
+      <div className="mx-3 mb-6 space-y-2">
+        <div className="p-4 rounded-2xl"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(16,185,129,0.1)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
+              style={{ background: 'rgba(5,150,105,0.2)', color: '#34D399', border: '1px solid rgba(5,150,105,0.25)' }}>
+              {ownerName[0]?.toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold truncate leading-none mb-1"
+                style={{ color: '#F1F5F9' }}>{shopName}</p>
+              <p className="text-[10px] truncate"
+                style={{ color: '#64748B' }}>{ownerName}</p>
+            </div>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-200 group"
+          style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.15)' }}
+        >
+          <span className="text-base w-5 text-center" style={{ color: '#F87171' }}>⏻</span>
+          <span className="text-sm font-semibold" style={{ color: '#F87171' }}>Keluar</span>
+        </button>
       </div>
     </aside>
   );

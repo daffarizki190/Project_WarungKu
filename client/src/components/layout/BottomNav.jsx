@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { Modal } from '../../lib/ui';
+import { useAuthStore } from '../../lib/stores/auth';
 
 const MAIN_NAV = [
     { key: 'kasir', label: 'Kasir', icon: '⊹' },
@@ -20,11 +21,17 @@ const MORE_NAV = [
 
 const BottomNav = ({ activePage, onNavigate }) => {
     const [showMore, setShowMore] = useState(false);
+    const { logout } = useAuthStore();
     const isMoreActive = MORE_NAV.some((n) => n.key === activePage);
 
     const handleNavigate = (key) => {
         onNavigate(key);
         setShowMore(false);
+    };
+
+    const handleLogout = () => {
+        setShowMore(false);
+        if (window.confirm('Keluar dari akun?')) logout();
     };
 
     return (
@@ -93,6 +100,12 @@ const BottomNav = ({ activePage, onNavigate }) => {
                             className="w-full py-3 rounded-2xl text-xs font-semibold mt-2"
                             style={{ background: 'rgba(255,255,255,0.04)', color: '#64748B' }}>
                             Tutup
+                        </button>
+                        {/* Tombol Keluar */}
+                        <button onClick={handleLogout}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold transition-all"
+                            style={{ background: 'rgba(220,38,38,0.1)', color: '#F87171', border: '1px solid rgba(220,38,38,0.2)' }}>
+                            <span>⏻</span> Keluar
                         </button>
                         {/* safe-area padding */}
                         <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} />
